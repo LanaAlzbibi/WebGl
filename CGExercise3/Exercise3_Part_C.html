@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>CG Exercise 3 - Part C</title>
+    <script
+      id="dsglinspector"
+      src="http://imiedit.f4.htw-berlin.de:4000/Vorlesung/DS/util/dsglinspector.js"
+    ></script>
+    <script type="application/javascript" src="dsliveupdate.js"></script>
+    <script type="application/javascript" src="util/glHelper.js"></script>
+  </head>
+
+  <body>
+    <h3>Student 'Name':LANA ALZBIBI</h3>
+    <canvas
+      id="ds_draw_here"
+      id="ds_draw_here"
+      width="1000"
+      height="1000"
+      style="border: 1px solid #000000"
+      >></canvas
+    >
+
+    <script>
+      //Declare all Variables here that need to be visible from init() AND render()
+      var gl,
+        program,
+        positionAttributeLocation,
+        positionAttributeLocationColor,
+        positionBuffer,
+        positionBufferColor,
+        blob,
+        blobCOL,
+        blobPOS;
+
+      init();
+
+      async function init() {
+        //Put your one time initialisation javascript here
+        gl = document.getElementById("ds_draw_here").getContext("webgl");
+        //load external resources
+        let vertexShaderSource = await fetch("util/vertex.glsl").then((e) =>
+          e.text()
+        );
+        let fragmentShaderSource = await fetch("util/fragment.glsl").then((e) =>
+          e.text()
+        );
+        // Link the two shaders into a program
+        program = makeProgram(gl, vertexShaderSource, fragmentShaderSource);
+        gl.useProgram(program);
+
+        blob = await fetch(
+          "https://raw.githubusercontent.com/StrippgenHTW/imistuff/master/parisDS.bin"
+        ).then((e) => e.arrayBuffer());
+        console.log(blob);
+        //3872172 Bytes die Positionsdaten als (x,y,z)
+        blobPOS = blob.slice(0, 3872172);
+        console.log(blobPOS);
+        //6453620  die Daten für die Farbwerte
+        blobCOL = blob.slice(3872172, 6453620);
+        console.log(blobCOL);
+        // HERE we need to initialize all the data for the GPU
+        positionAttributeLocation = gl.getAttribLocation(program, "a_position");
+        positionBuffer = gl.createBuffer();
+        gl.bindBuffer(gl.ARRAY_BUFFER, positionBuffer);
+        gl.bufferData(
+          gl.ARRAY_BUFFER,
+          new Float32Array(blobPOS),
+          gl.STATIC_DRAW
+        );
+
+        //bufer for col
+        positionAttributeLocationColor = gl.getAttribLocation(program, "a_col");
+        positionBufferColor = gl.createBuffer();
+        gl.bindBuffer(gl.ARRAY_BUFFER, positionBufferColor);
+        gl.bufferData(
+          gl.ARRAY_BUFFER,
+          new Float32Array(blobCOL),
+          gl.STATIC_DRAW
+        );
+        gl.enable(gl.DEPTH_TEST);
+
+        window.requestAnimationFrame(render); //Start rendering when everything is LOADED, not earlier
+      }
+
+      //do not write requestAnimationFrame(..) HERE, when loading data with async functions
+
+      function render(time) {
+        //Put your repeatedly drawing code javascript here
+        gl.clearColor(0, 0, 0, 1);
+        gl.clear(gl.COLOR_BUFFER_BIT);
+        gl.useProgram(program);
+
+        //pos
+        var size = 3;
+        var sizergb = 4;
+        var type = gl.FLOAT;
+        var normalize = false;
+        var stride = 0;
+        var offset = 0;
+        gl.enableVertexAttribArray(positionAttributeLocation);
+        gl.bindBuffer(gl.ARRAY_BUFFER, positionBuffer);
+        gl.vertexAttribPointer(
+          positionAttributeLocation,
+          size,
+          type,
+          normalize,
+          stride,
+          offset
+        );
+
+        //col
+        gl.enableVertexAttribArray(positionAttributeLocationColor);
+        gl.bindBuffer(gl.ARRAY_BUFFER, positionBufferColor);
+        gl.vertexAttribPointer(
+          positionAttributeLocationColor,
+          sizergb,
+           gl.UNSIGNED_SHORT,
+          true,
+          stride,
+          offset
+        );
+        var draw = gl.TRIANGLES;
+        var count = blobPOS.byteLength/(3*4);
+        gl.drawArrays(draw, offset, count);
+        //draw something with gl.drawArrays()
+        window.requestAnimationFrame(render); //render forever
+      }
+    </script>
+  </body>
+</html>

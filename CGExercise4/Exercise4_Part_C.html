@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>CG Exercise 4 - Part C</title>
+    <script type="application/javascript" src="dsliveupdate.js"></script>
+    <script
+      id="dsglinspector"
+      src="http://imiedit.f4.htw-berlin.de:4000/Vorlesung/DS/util/dsglinspector.js"
+    ></script>
+    <!-- <script src="util/dsgltfutils.js"></script> -->
+    <script src="utils/dsgltfutils.js"></script>
+  </head>
+
+  <body>
+    <h3>Student 'Name':;Lana Alzbibi</h3>
+    <canvas id="ds_draw_here"></canvas>
+
+    <script id="vertexShaderSource" type="notjs">
+          attribute vec4 a_position;
+      // all shaders have a main function
+      //
+      void main() {
+         vec3 pp = a_position.xyz;
+         gl_Position = vec4(pp,5.*pp.z );
+         gl_PointSize = 1.0;
+      }
+    </script>
+
+    <script id="fragmentShaderSource" type="notjs">
+          precision mediump float;
+      void main() {
+          gl_FragColor = vec4(1, 0, 0.5, 1); // return redish-purple
+      }
+    </script>
+    <script>
+      var gl, program, dataBuffer;
+
+      const vertSource =
+        document.getElementById("vertexShaderSource").innerText;
+      const fragSource = document.getElementById(
+        "fragmentShaderSource"
+      ).innerText;
+      // Get A WebGL context
+      var canvas_ds = document.getElementById("ds_draw_here");
+      canvas_ds.width = 800;
+      canvas_ds.height = 600;
+
+      init();
+
+      async function init() {
+        gl = canvas_ds.getContext("webgl");
+        // Allow INTEGER Indices
+        var ext = gl.getExtension("OES_element_index_uint");
+        gl.enable(gl.DEPTH_TEST);
+
+        // create GLSL shaders, upload the GLSL source, compile the shaders
+        program = createProgram(gl, vertSource, fragSource);
+        var positionAttributeLocation = gl.getAttribLocation(
+          program,
+          "a_position"
+        );
+
+        var glTFScene = await readglTF("data/simpleAFreeman.nglTF");
+        var buffer = await readglTFBin("data/" + glTFScene.buffers[0].uri);
+
+        glTFScene["meshes"].forEach((view) => {
+          let position = view["primitives"][0]["attributes"]["POSITION"];
+          console.log("position: " + position);
+          let posOfBuf = glTFScene["accessors"][position]["bufferView"];
+          console.log("buffer: " + posOfBuf);
+
+          let start = glTFScene["bufferViews"][posOfBuf]["byteOffset"];
+          let end = glTFScene["bufferViews"][posOfBuf]["byteLength"];
+          console.log("offSet: " + start);
+          console.log("byteLength: " + end);
+          let se = start + end;
+          let blob = buffer.slice(start, se);
+          var dataBuffer = gl.createBuffer();
+          gl.bindBuffer(gl.ARRAY_BUFFER, dataBuffer);
+          gl.bufferData(
+            gl.ARRAY_BUFFER,
+            new Float32Array(blob),
+            gl.STATIC_DRAW
+          );
+
+          gl.vertexAttribPointer(
+            positionAttributeLocation,
+            3, // 1,2,3,4
+            gl.FLOAT,
+            false,
+            0,
+            0
+          );
+          gl.enableVertexAttribArray(positionAttributeLocation);
+          gl.useProgram(program);
+          gl.drawArrays(gl.POINTS, 0, end / 12);
+        });
+        //DS Read in and show the data in the simpelest possible way!
+      }
+    </script>
+  </body>
+</html>

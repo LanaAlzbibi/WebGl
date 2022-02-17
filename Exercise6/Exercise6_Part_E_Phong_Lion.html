@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <title>CG Exercise 5 - Part D</title>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/dat-gui/0.7.6/dat.gui.min.js"></script>
+  <script src="utils/dsgltfutils.js"></script>
+  <script src="utils/colorbox.js"></script>
+  <script src="utils/gl-matrix-min.js"></script>
+
+</head>
+
+<body>
+  <script src="utils/dsogl.js"></script>
+  <h3>Student 'Name':...</h3>
+  <canvas id="ds_draw_here"></canvas>
+
+  <script>
+
+    let program, gltf;
+
+    // global variables...
+    const canvas = document.getElementById("ds_draw_here");
+    canvas.width = 900; //Choose conveniently
+    canvas.height = 600;
+
+    const gl = canvas.getContext("webgl");
+    // Allow INTEGER Indices
+    var ext = gl.getExtension('OES_element_index_uint');
+    const accTypeSize = { "SCALAR": 1, "VEC2": 2, "VEC3": 3, "VEC4": 4, "MAT4": 16 };
+    var global = {
+      light_pos: [-50, 2, 100],
+      cam_pos: [0, 5.2, 56],
+      cam_target: [0, 0, 0],
+      cam_matrix: undefined,
+      specular: 1.,
+      diffuse: 1.,
+      ambient: 0.1,
+      u_color: [200, 80, 20],
+      gl,
+      overwriteColor: true,
+    }
+
+    // DS GUI Settings for the nifty Gui on the right side of the screen
+    var gui = new dat.GUI({
+      name: 'Controls',
+      autoplace: false,
+      width: 300
+    });
+    gui.add(global, "specular", 0, 2).name("Specular");
+    gui.add(global, "diffuse", 0, 2).name("Diffuse");
+    gui.add(global, "ambient", 0, 2).name("Ambient");
+    gui.addColor(global, "u_color").name("BaseColor u_color");
+    gui.__ul.classList += ' bigtxt';
+
+    // read shader and compile
+    const box = createBox(gl);
+ 
+    init();
+ 
+    async function init() {
+      let path = "../lion_crushing_a_serpent/";
+      gltf = await readglTF(path + "scene.gltf");
+      for (let i in gltf.buffers) {
+          gltf.buffers[i].bdata = await readglTFBin(path + gltf.buffers[i].uri);
+      }
+      if (gltf.images) for (let img of gltf.images) {
+          makeTexture(gl, img, path);
+      }
+
+
+      var vertexShaderSource = await fetch("vertex.pixel.glsl").then(e => e.text());
+      var fragmentShaderSource = await fetch("fragment.pixel.glsl").then(e => e.text());
+
+      gl.enable(gl.DEPTH_TEST);
+      gl.clearColor(0.2, 0.2, 0.5, 1);
+
+
+      // Link the two shaders into a program
+      program = createProgram(gl, vertexShaderSource, fragmentShaderSource);
+
+      initScene();
+      window.requestAnimationFrame(render);
+    }
+
+    function renderPrimitive(prim, matrix) {
+      if (prim.attributes.POSITION) {
+        activateAttribute(prim, "a_position", prim.attributes.POSITION);
+      }
+      if (prim.attributes.NORMAL) {
+        activateAttribute(prim, "a_normal", prim.attributes.NORMAL);
+      }
+      if (prim.attributes.TEXCOORD_0) {
+        activateAttribute(prim, "a_texcoords", prim.attributes.TEXCOORD_0);
+      }
+      if (prim.material.pbrMetallicRoughness.baseColorTexture) {
+        var image = prim.material.pbrMetallicRoughness.baseColorTexture.index.source;
+        gl.bindTexture(gl.TEXTURE_2D, image.glTex);
+      }
+      let acc = prim.indices;
+      let view = acc.bufferView;
+      let off = view.byteOffset || 0;
+      gl.bindBuffer(view.target || gl.ELEMENT_ARRAY_BUFFER, view.glBuffer);
+
+      const offset = acc.byteOffset || 0;
+
+      var loc = gl.getUniformLocation(program, "u_wco");
+      if (loc) gl.uniformMatrix4fv(loc, false, matrix);
+
+      glMatrix.mat4.multiply(matrix, global.cam_matrix, matrix); //Make MVP
+      var transUniformLocation = gl.getUniformLocation(program, "u_mvp");
+      gl.uniformMatrix4fv(transUniformLocation, false, matrix);
+
+      gl.drawElements(gl.TRIANGLES, acc.count, acc.componentType, offset);
+      disableAttribute("a_position");
+      disableAttribute("a_normal");
+
+      if (prim.attributes.TEXCOORD_0) disableAttribute("a_texcoords");
+      gl.bindTexture(gl.TEXTURE_2D, null);
+    }
+
+
+    function render(time) {
+      // clear screen
+      gl.clear(gl.COLOR_BUFFER_BIT);
+      // render scene.
+      gl.useProgram(program);
+      setUniform("u_diffuse", global.diffuse);
+      setUniform("u_specular", global.specular);
+      setUniform("u_ambient", global.ambient);
+
+      var light_rot = glMatrix.mat4.fromYRotation(glMatrix.mat4.create(), time / 1000.);
+      glMatrix.vec3.transformMat4(global.light_pos, [0., 5., -36.], light_rot)
+
+      var lightUniformLocation = gl.getUniformLocation(program, "u_light");
+      if (lightUniformLocation) gl.uniform3fv(lightUniformLocation, global.light_pos);
+
+      var projection = glMatrix.mat4.create(); // projection matrix
+
+      glMatrix.mat4.perspective(projection, 45, 1.0, 0.1, 5000);
+      var look = glMatrix.mat4.lookAt(glMatrix.mat4.create(), global.cam_pos, global.cam_target, [0, 1, 0]);
+      global.cam_matrix = glMatrix.mat4.multiply(projection, projection, look);
+      global.time = time;
+
+      renderScene(global);
+
+      var light_mat = glMatrix.mat4.fromTranslation(glMatrix.mat4.create(), global.light_pos);
+      glMatrix.mat4.multiply(projection, projection, light_mat);
+      box.render(projection);
+
+      requestAnimationFrame(render);
+    }
+
+    function setUniform(name, value){
+      var location = gl.getUniformLocation(program, name);
+      if (location) gl.uniform1f(location, value);
+    }
+
+  </script>
+</body>
+
+</html>

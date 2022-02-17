@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>CG Exercise 4 - Part A</title>
+    <script type="application/javascript" src="dsliveupdate.js"></script>
+    <script id="dsglinspector" src="http://imiedit.f4.htw-berlin.de:4000/Vorlesung/DS/util/dsglinspector.js"></script>
+    <script src ="utils/dsgltfutils.js" id="dsglinspector"></script>
+</head>
+
+<body>
+    
+    <h3>Student 'Name':LANA ALZBIBI</h3>
+    <img src="data/bsp1.jpg">
+  </script>
+    <script>
+        init();
+        async function init(){
+        var glTFScene = await readglTF("data/simpleAFreeman.nglTF");
+
+        //DS CONSOLE output code here....
+        //Erste Frage
+
+        
+         var scenes = glTFScene["nodes"];
+        // var scenes = glTFScene.nodes.length;
+        console.log(scenes.length);
+        //2 Frage
+        console.log(scenes[2]);
+        //3Frage
+        var meshes =  glTFScene["meshes"][2]["primitives"[0]];
+        console.log(meshes)
+        // var keys = Object.keys(meshes);
+        // console.log(keys);
+        //4Frage    
+        var meshNode =  glTFScene["nodes"][2]["POSITION"];
+        var meshNodePunkte = meshNode.byteLength;
+        console.log(meshNodePunkte);
+
+}
+    </script>
+</body>
+
+</html>

@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>CG Exercise 4 - Part B</title>
+    <!-- <script type="application/javascript" src="dsliveupdate.js"></script>
+    <script src ="dsglinspector.js" id="dsglinspector"></script> -->
+</head>
+
+<body>
+
+    <h3>Student 'Name':Lana</h3>
+
+    <canvas id="ds_draw_here" width="600" height="600" __spector_context_type="webgl"></canvas>
+    <img src="data/bsp1.jpg" width="300px" id="dstex">
+
+    <script id="ds-vertex" type="notjs">
+      attribute vec4 a_position;
+      attribute vec2 a_texcoords;
+
+      varying vec2 v_texCO;
+
+    void main() {
+        gl_Position = a_position;
+        v_texCO = a_texcoords;
+    }
+    </script>
+
+    <script id="ds-fragment" type="notjs">
+    precision mediump float;
+    uniform sampler2D u_tex;
+    varying vec2 v_texCO;
+
+    void main() {
+        gl_FragColor = texture2D(u_tex, v_texCO);
+    }
+    </script>
+
+    <script>
+    // Get A WebGL context
+    var canvas_ds = document.getElementById('ds_draw_here');
+    canvas_ds.width  = 600; //Choose conveniently
+    canvas_ds.height = 600;
+
+    var gl = canvas_ds.getContext('webgl');
+    gl.clearColor(Math.random(), 0,Math.random(), 1);
+    var program;
+    //DS Use Code from the lecture here........
+      var uvkoords =[
+        //   0, 0,
+        //   1, 0,
+        //   0, 1,
+        //   0,1,
+        //   1,0,
+        //   1,1   
+          0, 0.8,
+          0, 0.5,
+          -0.7, 1,
+          0,1,
+         - 0.9,0,
+          -1,1  
+
+        
+        ];
+prepareQuad(gl); //compile shader, set positionbuffer, etc.
+       
+       //load image
+       var image = document.getElementById("dstex");
+       image.addEventListener('load', function() {
+    
+        //create Texture
+        var texture = gl.createTexture();
+        //activate this id as 2d texture
+        gl.bindTexture(gl.TEXTURE_2D, texture);
+        gl.texImage2D(gl.TEXTURE_2D, 0,gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, image);
+        //set parameters(not as mipmaps)
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+
+        //get UV data
+        var texCoordLocation = gl.getAttribLocation(program,"a_texcoords");
+
+        //create Buffer for texcoordlocation
+        var buffer = gl.createBuffer();
+        gl.bindBuffer(gl.ARRAY_BUFFER, buffer);
+        gl.enableVertexAttribArray(texCoordLocation);
+        gl.vertexAttribPointer(texCoordLocation, 2, gl.FLOAT, false, 0, 0);
+        gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(uvkoords), gl.STATIC_DRAW);
+
+
+    function render(time){
+        requestAnimationFrame(render); 
+        gl.clear(gl.COLOR_BUFFER_BIT);
+        var primitiveType = gl.TRIANGLES;
+        var offset = 0;
+        var count = 6;
+        gl.drawArrays(primitiveType,offset,count);
+          
+    }
+    requestAnimationFrame(render);
+       });
+    
+    function createShader(gl, type, source){
+       var shader = gl.createShader(type);
+       gl.shaderSource(shader,source);
+       gl.compileShader(shader);
+       var success = gl.getShaderParameter(shader, gl.COMPILE_STATUS);
+       if (success) {
+            return shader;
+        }
+        console.log(gl.getShaderInfoLog(shader));
+        gl.deleteShader(shader);
+    
+    }
+
+   function prepareQuad(gl){
+       var vertexShaderSource   = document.getElementById('ds-vertex').text;
+       var fragmentShaderSource = document.getElementById('ds-fragment').text;
+       //create GLSL SHADERS AND UPLOAD COMPILE
+       var vertexShader   = createShader(gl, gl.VERTEX_SHADER, vertexShaderSource);
+       var fragmentShader = createShader(gl, gl.FRAGMENT_SHADER, fragmentShaderSource);
+       //link into a program
+       program = createProgram(gl, vertexShader, fragmentShader);
+
+       //look up where the vertexData needs to go
+       var positionAttributeLocation = gl.getAttribLocation(program, 'a_position');
+       var positionBuffer = gl.createBuffer();
+       //create buffer and putthree 2d clip space points in it
+       //ARRAY_BUFFER = positionBuffer)
+       gl.bindBuffer(gl.ARRAY_BUFFER, positionBuffer);
+           s = 0.8;
+       var positions = [
+       -s,-s,
+        s,-s,
+       -s, s,
+       -s, s,
+        s,-s,
+        s, s
+
+       ];
+      gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(positions),gl.STATIC_DRAW);
+      //render
+      gl.useProgram(program);
+      gl.enableVertexAttribArray(positionAttributeLocation);
+      gl.bindBuffer(gl.ARRAY_BUFFER, positionBuffer);
+      // Tell the attribute how to get data out of positionBuffer 
+      var size = 2;
+      var type = gl.FLOAT;
+      var normalize = false;
+      var stride = 0;
+      var offset = 0;
+      gl.vertexAttribPointer(positionAttributeLocation,
+      size,
+      type,
+      normalize,
+      stride,
+      offset
+      )
+
+    } 
+        function createProgram(gl, vertexShader, fragmentShader){
+       var program = gl.createProgram();
+       gl.attachShader(program,vertexShader);
+       gl.attachShader(program,fragmentShader);
+       gl.linkProgram(program);
+      var success = gl.getProgramParameter(program, gl.LINK_STATUS);
+        if (success) {
+            return program;
+        }
+           console.log(gl.getProgramInfoLog(program));
+        gl.deleteProgram(program);
+    }
+       
+
+    </script>
+
+  
+</body>
+
+</html>

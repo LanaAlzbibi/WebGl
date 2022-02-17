@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="utf-8">
+    <title>Exercise 5 ALTERNATIVE - Name:...</title>
+</head>
+
+<body>
+    <canvas id="drawHere" height="600px;" width="600px;"></canvas>
+    <script src="utils/gl-matrix-min.js"></script>
+    <script type="module">
+        import { gl, initGL, createProgram, createShader } from "./utils/dsogl.js";
+        import { createBox } from "./utils/colorbox.js";
+        // global variables...
+        var canvas = document.getElementById("drawHere");
+        var colorUniformLocation;
+
+        initGL(canvas);
+        let box = createBox(gl,1);
+        gl.useProgram(box.program); 
+
+        init();
+
+        async function init(scenefile) {
+          requestAnimationFrame(render);
+        }
+
+        function render(time) {
+          var matrix = glMatrix.mat4.create();
+          // clear screen
+          gl.clearColor(.7, 0.7, 0.7, 1);
+          gl.clear(gl.COLOR_BUFFER_BIT);
+          // get u_color from for modifiing it for hours, minutes and seconds 
+          colorUniformLocation = gl.getUniformLocation(box.program, "u_color");
+
+          // DSTODO Prepare CAMERA with glMatrix.ortho
+
+          // 3s = 1 sec SimTime
+          let secSim = time /3000.;
+
+          //DSTODO maybe draw hourmarks or something
+          
+
+          // DSTODO rotate scale and translate, finally set color then draw box
+          // Stunde
+          if(colorUniformLocation)gl.uniform4f(colorUniformLocation, 1,0,0,1);
+          box.render(matrix);
+
+          // DSTODO rotate scale and translate, finally set color then draw box
+          //Minute
+          if(colorUniformLocation)gl.uniform4f(colorUniformLocation, 0,0,1,1);
+          box.render(matrix);
+
+          // DSTODO rotate scale and translate, finally set color then draw box
+          //Sekunde
+          if(colorUniformLocation)gl.uniform4f(colorUniformLocation, 1,1,0,1);
+          box.render(matrix);
+
+          requestAnimationFrame(render);
+        }
+
+    </script>
+</body>
+
+</html>
